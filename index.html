@@ -9,6 +9,7 @@
 <title>Simple Bedrock Studio</title>
 <style>
   :root {
+    color-scheme: light dark;
     --bg: #f6f5f2;
     --surface: #ffffff;
     --surface-2: #efede8;
@@ -22,6 +23,7 @@
     --user-bubble: #1f6feb;
     --user-text: #ffffff;
     --radius: 12px;
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 5l4 4 4-4' fill='none' stroke='%236b6a66' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -37,6 +39,7 @@
       --danger-bg: #3a2020;
       --user-bubble: #2f5fb3;
       --user-text: #ffffff;
+      --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 5l4 4 4-4' fill='none' stroke='%239a9a9f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     }
   }
   * { box-sizing: border-box; }
@@ -81,11 +84,32 @@
     outline: none;
   }
   input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  /* iOS / Android でも同じ見た目になるようにネイティブの装飾を消して矢印を自前で描く */
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 46px;
+    padding-right: 38px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px 14px;
+  }
+  select:disabled { opacity: .6; }
+  .field-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .field-head label { margin-bottom: 4px; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--accent); font-size: 13px; cursor: pointer; }
+  .link-btn:disabled { color: var(--muted); }
+  code { font-size: 12px; background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
   textarea { resize: vertical; min-height: 88px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .row > div { min-width: 0; }
   .check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-top: 10px; }
-  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; white-space: pre-line; word-break: break-word; }
 
   button {
     border: 0; border-radius: 10px; padding: 12px 16px; cursor: pointer;
@@ -141,7 +165,7 @@
     <label for="apiKey">Bedrock APIキー</label>
     <input id="apiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ABSK... または bedrock-api-key-...">
     <label class="check"><input id="rememberKey" type="checkbox"> この端末に保存する（ブラウザ内のみ）</label>
-    <p class="hint">キーは AWS（bedrock-runtime）への通信にだけ使い、ほかのサーバーには送信しません。共用端末では保存しないでください。</p>
+    <p class="hint">キーは AWS（Bedrock）への通信にだけ使い、ほかのサーバーには送信しません。共用端末では保存しないでください。</p>
   </details>
 
   <div class="tabs" role="tablist">
@@ -152,16 +176,14 @@
   <!-- 画像生成 -->
   <section id="panelImage" role="tabpanel">
     <div class="card">
-      <div class="row">
-        <div>
-          <label for="imgModel">モデル</label>
-          <select id="imgModel"></select>
-        </div>
-        <div>
-          <label for="imgRegion">リージョン</label>
-          <select id="imgRegion"></select>
-        </div>
+      <label for="imgRegion">リージョン</label>
+      <select id="imgRegion"></select>
+
+      <div class="field-head">
+        <label for="imgModel">モデル</label>
+        <button class="link-btn" id="imgReload" type="button">一覧を更新</button>
       </div>
+      <select id="imgModel"></select>
       <p class="hint" id="imgModelHint"></p>
 
       <label for="imgPrompt">プロンプト（英語推奨）</label>
@@ -191,18 +213,16 @@
   <!-- チャット -->
   <section id="panelChat" role="tabpanel" hidden>
     <div class="card">
-      <div class="row">
-        <div>
-          <label for="chatModel">モデルID</label>
-          <input id="chatModel" type="text" list="chatModels" autocapitalize="off" spellcheck="false">
-          <datalist id="chatModels"></datalist>
-        </div>
-        <div>
-          <label for="chatRegion">リージョン</label>
-          <select id="chatRegion"></select>
-        </div>
+      <label for="chatRegion">リージョン</label>
+      <select id="chatRegion"></select>
+
+      <div class="field-head">
+        <label for="chatModel">モデル</label>
+        <button class="link-btn" id="chatReload" type="button">一覧を更新</button>
       </div>
-      <p class="hint">候補以外のモデルIDもそのまま入力できます。<code>us.</code> / <code>apac.</code> / <code>jp.</code> などの接頭辞はリージョンに合わせてください。</p>
+      <select id="chatModel"></select>
+      <input id="chatModelCustom" type="text" autocapitalize="off" spellcheck="false" placeholder="モデルID または 推論プロファイルID" style="margin-top:8px" hidden>
+      <p class="hint" id="chatModelHint"></p>
       <label for="chatSystem">システムプロンプト（任意）</label>
       <input id="chatSystem" type="text" placeholder="あなたは親切なアシスタントです">
     </div>
@@ -237,10 +257,24 @@
 
   // ---------- 定義 ----------
   const REGIONS = [
-    'us-east-1', 'us-east-2', 'us-west-2',
-    'ap-northeast-1', 'ap-northeast-3', 'ap-southeast-1', 'ap-southeast-2',
-    'eu-central-1', 'eu-west-1', 'eu-west-3',
-  ];
+    ['us-east-1', '米国東部（バージニア北部）'],
+    ['us-east-2', '米国東部（オハイオ）'],
+    ['us-west-2', '米国西部（オレゴン）'],
+    ['ca-central-1', 'カナダ（中部）'],
+    ['sa-east-1', '南米（サンパウロ）'],
+    ['ap-northeast-1', 'アジア太平洋（東京）'],
+    ['ap-northeast-3', 'アジア太平洋（大阪）'],
+    ['ap-northeast-2', 'アジア太平洋（ソウル）'],
+    ['ap-southeast-1', 'アジア太平洋（シンガポール）'],
+    ['ap-southeast-2', 'アジア太平洋（シドニー）'],
+    ['ap-south-1', 'アジア太平洋（ムンバイ）'],
+    ['eu-central-1', '欧州（フランクフルト）'],
+    ['eu-west-1', '欧州（アイルランド）'],
+    ['eu-west-2', '欧州（ロンドン）'],
+    ['eu-west-3', '欧州（パリ）'],
+    ['eu-north-1', '欧州（ストックホルム）'],
+    ['eu-south-1', '欧州（ミラノ）'],
+  ].map(([id, name]) => [id, `${name}  ${id}`]);
 
   const NOVA_SIZES = [
     ['1024x1024', '1024×1024（正方形）'],
@@ -253,26 +287,23 @@
   const STABILITY_RATIOS = ['1:1', '16:9', '9:16', '3:2', '2:3', '4:5', '5:4', '21:9', '9:21']
     .map((r) => [r, r]);
 
-  const IMAGE_MODELS = [
-    { id: 'amazon.nova-canvas-v1:0', name: 'Amazon Nova Canvas', kind: 'nova', region: 'us-east-1',
-      hint: 'us-east-1 / ap-northeast-1 / eu-west-1 で利用できます。' },
-    { id: 'stability.stable-image-core-v1:1', name: 'Stable Image Core', kind: 'stability', region: 'us-west-2',
-      hint: 'Stability AI 系は主に us-west-2 で提供されています。' },
-    { id: 'stability.sd3-5-large-v1:0', name: 'Stable Diffusion 3.5 Large', kind: 'stability', region: 'us-west-2',
-      hint: 'Stability AI 系は主に us-west-2 で提供されています。' },
-    { id: 'stability.stable-image-ultra-v1:1', name: 'Stable Image Ultra', kind: 'stability', region: 'us-west-2',
-      hint: 'Stability AI 系は主に us-west-2 で提供されています。高品質ですが高めです。' },
+  // キー未入力・取得失敗時に出す最低限の候補
+  const FALLBACK_IMAGE = [
+    { id: 'amazon.nova-canvas-v1:0', name: 'Nova Canvas', provider: 'Amazon' },
+    { id: 'stability.stable-image-core-v1:1', name: 'Stable Image Core', provider: 'Stability AI' },
+    { id: 'stability.sd3-5-large-v1:0', name: 'SD3.5 Large', provider: 'Stability AI' },
+    { id: 'stability.stable-image-ultra-v1:1', name: 'Stable Image Ultra', provider: 'Stability AI' },
+  ];
+  const FALLBACK_CHAT = [
+    { id: 'us.amazon.nova-lite-v1:0', name: 'Nova Lite · US', provider: 'Amazon' },
+    { id: 'us.amazon.nova-pro-v1:0', name: 'Nova Pro · US', provider: 'Amazon' },
+    { id: 'us.anthropic.claude-haiku-4-5-20251001-v1:0', name: 'Claude Haiku 4.5 · US', provider: 'Anthropic' },
+    { id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', name: 'Claude Sonnet 4.5 · US', provider: 'Anthropic' },
   ];
 
-  const CHAT_MODELS = [
-    'us.amazon.nova-lite-v1:0',
-    'us.amazon.nova-micro-v1:0',
-    'us.amazon.nova-pro-v1:0',
-    'apac.amazon.nova-lite-v1:0',
-    'us.anthropic.claude-haiku-4-5-20251001-v1:0',
-    'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-    'openai.gpt-oss-120b-1:0',
-  ];
+  // 画像編集系（入力画像が必須）の Stability モデルは text-to-image では使えないので除外
+  const IMAGE_EDIT_RE = /upscale|inpaint|outpaint|erase|remove|replace|recolor|style|sketch|structure|control/i;
+  const CUSTOM = '__custom__';
 
   const fillSelect = (el, items, value) => {
     el.innerHTML = '';
@@ -284,23 +315,44 @@
     if (value && items.some(([v]) => v === value)) el.value = value;
   };
 
-  // ---------- Bedrock 呼び出し ----------
-  const endpoint = (region, modelId, action) =>
-    `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/${action}`;
+  // models: [{id, name, provider}] をプロバイダごとの optgroup で並べる
+  function fillModelSelect(el, models, value, extra) {
+    el.innerHTML = '';
+    const groups = new Map();
+    for (const m of models) {
+      if (!groups.has(m.provider)) groups.set(m.provider, []);
+      groups.get(m.provider).push(m);
+    }
+    for (const [provider, list] of groups) {
+      const g = document.createElement('optgroup');
+      g.label = provider;
+      for (const m of list) {
+        const o = document.createElement('option');
+        o.value = m.id; o.textContent = m.name;
+        g.appendChild(o);
+      }
+      el.appendChild(g);
+    }
+    if (extra) {
+      const o = document.createElement('option');
+      o.value = extra[0]; o.textContent = extra[1];
+      el.appendChild(o);
+    }
+    const ids = models.map((m) => m.id).concat(extra ? [extra[0]] : []);
+    if (value && ids.includes(value)) el.value = value;
+  }
 
-  async function callBedrock(region, modelId, action, body) {
-    const key = $('apiKey').value.trim();
+  // ---------- Bedrock 呼び出し ----------
+  const apiKey = () => $('apiKey').value.trim();
+
+  async function request(url, init) {
+    const key = apiKey();
     if (!key) throw new Error('設定から Bedrock APIキーを入力してください。');
     let res;
     try {
-      res = await fetch(endpoint(region, modelId, action), {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(body),
+      res = await fetch(url, {
+        ...init,
+        headers: { 'Authorization': `Bearer ${key}`, 'Accept': 'application/json', ...(init.headers || {}) },
       });
     } catch (e) {
       throw new Error(`通信に失敗しました（リージョン名や電波状況を確認してください）\n${e.message}`);
@@ -315,23 +367,103 @@
     return data;
   }
 
+  const callBedrock = (region, modelId, action, body) => request(
+    `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/${action}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+  );
+
   function explain(status, msg) {
     const tips = [];
     if (status === 403 && /not authorized|invalid|expired|token/i.test(msg))
-      tips.push('APIキーが無効か期限切れの可能性があります。');
+      tips.push('APIキーが無効か期限切れ、または権限が不足している可能性があります。');
     if (/access to the model|don't have access|not have access/i.test(msg))
       tips.push('コンソールでこのモデルの利用が有効になっているか確認してください。');
     if (/on-demand throughput/i.test(msg))
-      tips.push('モデルIDに us. / apac. などの推論プロファイル接頭辞を付けてみてください。');
+      tips.push('同じモデルの「US」「APAC」「Global」などの推論プロファイル版を選んでください。');
     if (/model identifier is invalid|not supported in this region|could not resolve/i.test(msg))
       tips.push('このリージョンでは提供されていないモデルかもしれません。');
+    if (/doesn't support|does not support|validation/i.test(msg) && status === 400)
+      tips.push('このモデルはこの使い方（Converse / パラメータ）に対応していない可能性があります。');
     if (status === 429) tips.push('リクエストが多すぎます。少し待って再試行してください。');
     return msg + (tips.length ? '\n→ ' + tips.join('\n→ ') : '');
   }
 
+  // ---------- モデル一覧（ListFoundationModels + ListInferenceProfiles） ----------
+  const catalogCache = new Map(); // region -> Promise<{image, chat}>
+
+  async function fetchCatalog(region) {
+    const base = `https://bedrock.${region}.amazonaws.com`;
+    const fm = await request(`${base}/foundation-models`, { method: 'GET' });
+    const summaries = fm.modelSummaries || [];
+
+    // 推論プロファイルは失敗しても基盤モデルだけで続行
+    let profiles = [];
+    try {
+      let next = null;
+      do {
+        const q = new URLSearchParams({ maxResults: '1000' });
+        if (next) q.set('nextToken', next);
+        const r = await request(`${base}/inference-profiles?${q}`, { method: 'GET' });
+        profiles = profiles.concat(r.inferenceProfileSummaries || []);
+        next = r.nextToken;
+      } while (next);
+    } catch (e) {
+      console.warn('ListInferenceProfiles failed', e);
+    }
+
+    const byId = new Map(summaries.map((s) => [s.modelId, s]));
+    const has = (arr, v) => (arr || []).includes(v);
+    const legacy = (s) => s.modelLifecycle && s.modelLifecycle.status === 'LEGACY';
+    const label = (s, scope) => `${s.modelName}${scope ? ' · ' + scope : ''}${legacy(s) ? '（旧）' : ''}`;
+
+    const isChat = (s) => has(s.outputModalities, 'TEXT') && has(s.inputModalities, 'TEXT')
+      && !/rerank/i.test(s.modelId);
+    const isImage = (s) => has(s.outputModalities, 'IMAGE')
+      && /^(amazon|stability)\./.test(s.modelId) && !IMAGE_EDIT_RE.test(s.modelId);
+
+    const chat = [];
+    const image = [];
+    const add = (list, s, id, scope) => list.push({
+      id, name: label(s, scope), provider: s.providerName || 'Other', legacy: legacy(s),
+    });
+
+    // 1) オンデマンドで直接呼べる基盤モデル
+    for (const s of summaries) {
+      if (!has(s.inferenceTypesSupported, 'ON_DEMAND')) continue;
+      if (isChat(s)) add(chat, s, s.modelId);
+      if (isImage(s)) add(image, s, s.modelId);
+    }
+
+    // 2) クロスリージョン推論プロファイル（us. / apac. / jp. / global. など）
+    for (const p of profiles) {
+      if (p.status && p.status !== 'ACTIVE') continue;
+      const arn = (p.models && p.models[0] && p.models[0].modelArn) || '';
+      const s = byId.get(arn.split('foundation-model/')[1]);
+      if (!s) continue;
+      const scope = p.type === 'APPLICATION'
+        ? p.inferenceProfileName
+        : (p.inferenceProfileId.split('.')[0] || '').toUpperCase();
+      if (isChat(s)) add(chat, s, p.inferenceProfileId, scope);
+      if (isImage(s)) add(image, s, p.inferenceProfileId, scope);
+    }
+
+    const sort = (list) => list.sort((a, b) =>
+      a.provider.localeCompare(b.provider) || (a.legacy - b.legacy) || a.name.localeCompare(b.name));
+    return { image: sort(image), chat: sort(chat) };
+  }
+
+  function getCatalog(region, force) {
+    if (force || !catalogCache.has(region)) {
+      const p = fetchCatalog(region);
+      catalogCache.set(region, p);
+      p.catch(() => catalogCache.delete(region));
+    }
+    return catalogCache.get(region);
+  }
+
   // ---------- APIキー ----------
   function refreshKeyState() {
-    const has = !!$('apiKey').value.trim();
+    const has = !!apiKey();
     $('keyState').textContent = has ? 'APIキー設定済み' : 'APIキー未設定';
     $('keyState').classList.toggle('ok', has);
   }
@@ -341,11 +473,17 @@
   refreshKeyState();
 
   const persistKey = () => {
-    if ($('rememberKey').checked && $('apiKey').value.trim()) store.set('apiKey', $('apiKey').value.trim());
+    if ($('rememberKey').checked && apiKey()) store.set('apiKey', apiKey());
     else store.del('apiKey');
     refreshKeyState();
   };
-  $('apiKey').addEventListener('input', persistKey);
+  let keyTimer = null;
+  $('apiKey').addEventListener('input', () => {
+    persistKey();
+    // 入力が落ち着いたらモデル一覧を取り直す
+    clearTimeout(keyTimer);
+    keyTimer = setTimeout(() => { catalogCache.clear(); loadImageModels(); loadChatModels(); }, 600);
+  });
   $('rememberKey').addEventListener('change', persistKey);
 
   // ---------- タブ ----------
@@ -362,34 +500,61 @@
   if (store.get('tab') === 'tabChat') showTab($('tabChat'));
 
   // ---------- 画像生成 ----------
-  const regionItems = REGIONS.map((r) => [r, r]);
-  fillSelect($('imgModel'), IMAGE_MODELS.map((m) => [m.id, m.name]), store.get('imgModel'));
-  fillSelect($('imgRegion'), regionItems, store.get('imgRegion') || 'us-east-1');
+  fillSelect($('imgRegion'), REGIONS, store.get('imgRegion') || 'us-east-1');
 
-  const currentImageModel = () => IMAGE_MODELS.find((m) => m.id === $('imgModel').value);
+  const imageKind = (id) => (/(^|\.)stability\./.test(id) ? 'stability' : 'nova');
 
-  function syncImageModel(fromUser) {
-    const m = currentImageModel();
-    $('imgModelHint').textContent = m.hint;
-    const sizes = m.kind === 'nova' ? NOVA_SIZES : STABILITY_RATIOS;
-    fillSelect($('imgSize'), sizes, store.get('imgSize.' + m.kind));
-    if (fromUser) {
-      $('imgRegion').value = m.region;
-      store.set('imgRegion', m.region);
+  function syncImageSize() {
+    const kind = imageKind($('imgModel').value || '');
+    fillSelect($('imgSize'), kind === 'nova' ? NOVA_SIZES : STABILITY_RATIOS, store.get('imgSize.' + kind));
+  }
+
+  let imgLoadSeq = 0;
+  async function loadImageModels(force) {
+    const seq = ++imgLoadSeq;
+    const region = $('imgRegion').value;
+    const saved = store.get('imgModel');
+    if (!apiKey()) {
+      fillModelSelect($('imgModel'), FALLBACK_IMAGE, saved);
+      $('imgModelHint').textContent = 'APIキーを入力すると、このリージョンで使えるモデルを自動で一覧表示します。';
+      syncImageSize();
+      return;
+    }
+    $('imgModel').disabled = true; $('imgReload').disabled = true;
+    $('imgModelHint').textContent = 'モデル一覧を取得中…';
+    try {
+      const { image } = await getCatalog(region, force);
+      if (seq !== imgLoadSeq) return;
+      if (image.length) {
+        fillModelSelect($('imgModel'), image, saved);
+        $('imgModelHint').textContent = `${region} の画像モデル ${image.length} 件`;
+      } else {
+        fillModelSelect($('imgModel'), [], null);
+        $('imgModelHint').textContent = `${region} には画像生成モデルがありません。us-east-1（Nova Canvas）や us-west-2（Stability AI）を試してください。`;
+      }
+    } catch (e) {
+      if (seq !== imgLoadSeq) return;
+      fillModelSelect($('imgModel'), FALLBACK_IMAGE, saved);
+      $('imgModelHint').textContent = 'モデル一覧を取得できなかったため、代表的なモデルを表示しています。\n' + e.message;
+    } finally {
+      if (seq === imgLoadSeq) { $('imgModel').disabled = false; $('imgReload').disabled = false; syncImageSize(); }
     }
   }
-  $('imgModel').addEventListener('change', () => { store.set('imgModel', $('imgModel').value); syncImageModel(true); });
-  $('imgRegion').addEventListener('change', () => store.set('imgRegion', $('imgRegion').value));
-  $('imgSize').addEventListener('change', () => store.set('imgSize.' + currentImageModel().kind, $('imgSize').value));
-  syncImageModel(false);
 
-  function buildImageRequest(m, prompt, negative, size, seed) {
-    if (m.kind === 'nova') {
+  $('imgRegion').addEventListener('change', () => { store.set('imgRegion', $('imgRegion').value); loadImageModels(); });
+  $('imgModel').addEventListener('change', () => { store.set('imgModel', $('imgModel').value); syncImageSize(); });
+  $('imgReload').addEventListener('click', () => loadImageModels(true));
+  $('imgSize').addEventListener('change', () => store.set('imgSize.' + imageKind($('imgModel').value), $('imgSize').value));
+  loadImageModels();
+
+  function buildImageRequest(modelId, prompt, negative, size, seed) {
+    if (imageKind(modelId) === 'nova') {
+      // Nova Canvas / Titan Image Generator 共通フォーマット
       const [width, height] = size.split('x').map(Number);
       const body = {
         taskType: 'TEXT_IMAGE',
         textToImageParams: { text: prompt },
-        imageGenerationConfig: { numberOfImages: 1, width, height, quality: 'standard', cfgScale: 6.5 },
+        imageGenerationConfig: { numberOfImages: 1, width, height, cfgScale: 6.5 },
       };
       if (negative) body.textToImageParams.negativeText = negative;
       if (seed !== null) body.imageGenerationConfig.seed = seed;
@@ -430,44 +595,82 @@
 
   $('imgGo').addEventListener('click', async () => {
     const prompt = $('imgPrompt').value.trim();
+    const modelId = $('imgModel').value;
+    const showErr = (m) => { $('imgError').textContent = m; $('imgError').hidden = false; };
     $('imgError').hidden = true;
-    if (!prompt) { $('imgError').textContent = 'プロンプトを入力してください。'; $('imgError').hidden = false; return; }
+    if (!modelId) return showErr('モデルを選んでください。');
+    if (!prompt) return showErr('プロンプトを入力してください。');
 
-    const m = currentImageModel();
+    const modelName = $('imgModel').selectedOptions[0].textContent;
     const seedRaw = $('imgSeed').value.trim();
     const seed = seedRaw === '' ? null : Math.max(0, parseInt(seedRaw, 10) || 0);
-    const body = buildImageRequest(m, prompt, $('imgNegative').value.trim(), $('imgSize').value, seed);
+    const body = buildImageRequest(modelId, prompt, $('imgNegative').value.trim(), $('imgSize').value, seed);
 
     $('imgGo').disabled = true;
     const started = performance.now();
-    $('imgStatus').textContent = `${m.name} で生成中…`;
+    $('imgStatus').textContent = `${modelName} で生成中…`;
     try {
-      const data = await callBedrock($('imgRegion').value, m.id, 'invoke', body);
+      const data = await callBedrock($('imgRegion').value, modelId, 'invoke', body);
       if (data.error) throw new Error(data.error);
       const reasons = data.finish_reasons || [];
       if (reasons[0]) throw new Error(`生成が中断されました: ${reasons[0]}（コンテンツフィルタの可能性があります）`);
       const images = data.images || [];
       if (!images.length) throw new Error('画像が返ってきませんでした。\n' + JSON.stringify(data).slice(0, 500));
       const sec = ((performance.now() - started) / 1000).toFixed(1);
-      images.forEach((b64) => addShot(b64, `${m.name} · ${sec}s · ${prompt}`));
+      images.forEach((b64) => addShot(b64, `${modelName} · ${sec}s · ${prompt}`));
       $('imgStatus').textContent = `完了（${sec}秒）。画像は長押し、または「保存」で保存できます。`;
     } catch (e) {
       $('imgStatus').textContent = '';
-      $('imgError').textContent = e.message;
-      $('imgError').hidden = false;
+      showErr(e.message);
     } finally {
       $('imgGo').disabled = false;
     }
   });
 
   // ---------- チャット ----------
-  $('chatModels').innerHTML = CHAT_MODELS.map((id) => `<option value="${id}">`).join('');
-  $('chatModel').value = store.get('chatModel') || CHAT_MODELS[0];
-  fillSelect($('chatRegion'), regionItems, store.get('chatRegion') || 'us-east-1');
+  fillSelect($('chatRegion'), REGIONS, store.get('chatRegion') || 'us-east-1');
   $('chatSystem').value = store.get('chatSystem') || '';
-  $('chatModel').addEventListener('change', () => store.set('chatModel', $('chatModel').value.trim()));
-  $('chatRegion').addEventListener('change', () => store.set('chatRegion', $('chatRegion').value));
+  $('chatModelCustom').value = store.get('chatModelCustom') || '';
+
+  const chatModelId = () => ($('chatModel').value === CUSTOM
+    ? $('chatModelCustom').value.trim()
+    : $('chatModel').value);
+  const syncChatCustom = () => { $('chatModelCustom').hidden = $('chatModel').value !== CUSTOM; };
+
+  let chatLoadSeq = 0;
+  async function loadChatModels(force) {
+    const seq = ++chatLoadSeq;
+    const region = $('chatRegion').value;
+    const saved = store.get('chatModel');
+    const extra = [CUSTOM, 'その他（IDを直接入力）'];
+    if (!apiKey()) {
+      fillModelSelect($('chatModel'), FALLBACK_CHAT, saved, extra);
+      $('chatModelHint').textContent = 'APIキーを入力すると、このリージョンで使えるモデルを自動で一覧表示します。';
+      syncChatCustom();
+      return;
+    }
+    $('chatModel').disabled = true; $('chatReload').disabled = true;
+    $('chatModelHint').textContent = 'モデル一覧を取得中…';
+    try {
+      const { chat } = await getCatalog(region, force);
+      if (seq !== chatLoadSeq) return;
+      fillModelSelect($('chatModel'), chat, saved, extra);
+      $('chatModelHint').textContent = `${region} のテキストモデル ${chat.length} 件。「US」「APAC」「GLOBAL」などはクロスリージョン推論プロファイルです。`;
+    } catch (e) {
+      if (seq !== chatLoadSeq) return;
+      fillModelSelect($('chatModel'), FALLBACK_CHAT, saved, extra);
+      $('chatModelHint').textContent = 'モデル一覧を取得できなかったため、代表的なモデルを表示しています。\n' + e.message;
+    } finally {
+      if (seq === chatLoadSeq) { $('chatModel').disabled = false; $('chatReload').disabled = false; syncChatCustom(); }
+    }
+  }
+
+  $('chatRegion').addEventListener('change', () => { store.set('chatRegion', $('chatRegion').value); loadChatModels(); });
+  $('chatModel').addEventListener('change', () => { store.set('chatModel', $('chatModel').value); syncChatCustom(); });
+  $('chatModelCustom').addEventListener('change', () => store.set('chatModelCustom', $('chatModelCustom').value.trim()));
+  $('chatReload').addEventListener('click', () => loadChatModels(true));
   $('chatSystem').addEventListener('change', () => store.set('chatSystem', $('chatSystem').value));
+  loadChatModels();
 
   let history = [];
 
@@ -490,9 +693,10 @@
 
   async function send() {
     const text = $('chatInput').value.trim();
-    const modelId = $('chatModel').value.trim();
-    if (!text || !modelId) return;
+    const modelId = chatModelId();
     $('chatError').hidden = true;
+    if (!text) return;
+    if (!modelId) { $('chatError').textContent = 'モデルを選ぶか、モデルIDを入力してください。'; $('chatError').hidden = false; return; }
 
     history.push({ role: 'user', content: [{ text }] });
     renderMsg('user', text);
